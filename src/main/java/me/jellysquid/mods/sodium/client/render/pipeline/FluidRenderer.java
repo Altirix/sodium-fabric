@@ -248,18 +248,14 @@ public class FluidRenderer {
                 float v2 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
                 float v3 = sprite.getFrameV(8.0D);
                 if (dir == Direction.DOWN || dir == Direction.UP) {
-                   // if (quad.getFlags() != 0){ // unoptimise everything till it breaks faster
-                    if (quad.getFlags() == 0b01){SodiumClientMod.logger().atInfo().log("UD what the fuck ALIGNED?");}
-                    if (quad.getFlags() == 0b10){SodiumClientMod.logger().atInfo().log("UD what the fuck PART ALIGNED?");}
-                    if (quad.getFlags() == 0b11){SodiumClientMod.logger().atInfo().log("UD what the fuck ALIGNED?");}
-                    if (quad.getFlags() == 0b00){}
-                }
+                    if (quad.getFlags() != 0) {
+                            SodiumClientMod.logger().atInfo().log("???");
+                        }
+                    }
                 else if (dir == Direction.NORTH || dir == Direction.EAST || dir == Direction.SOUTH || dir == Direction.WEST){
-                   // if(quad.getFlags() != 1) {
-                    if (quad.getFlags() == 0b01){}
-                    if (quad.getFlags() == 0b10){SodiumClientMod.logger().atInfo().log("what the fuck PART ALIGNED?");}
-                    if (quad.getFlags() == 0b11){}
-                    if (quad.getFlags() == 0b00){SodiumClientMod.logger().atInfo().log("what the fuck NOT ALIGNED?");}
+                    if(quad.getFlags() != 1) {
+                        if (quad.getFlags() == 0b01){SodiumClientMod.logger().atInfo().log("???");}
+                    }
                 }
                 quad.setSprite(sprite);
 

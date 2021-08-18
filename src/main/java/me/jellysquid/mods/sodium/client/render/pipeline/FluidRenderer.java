@@ -1,5 +1,6 @@
 package me.jellysquid.mods.sodium.client.render.pipeline;
 
+import me.jellysquid.mods.sodium.client.SodiumClientMod;
 import me.jellysquid.mods.sodium.client.model.light.LightMode;
 import me.jellysquid.mods.sodium.client.model.light.LightPipeline;
 import me.jellysquid.mods.sodium.client.model.light.LightPipelineProvider;
@@ -30,6 +31,7 @@ import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.function.BooleanBiFunction;
+import net.minecraft.util.logging.LoggerPrintStream;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -41,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
 public class FluidRenderer {
     // TODO: allow this to be changed by vertex format
@@ -244,7 +247,20 @@ public class FluidRenderer {
                 float v1 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
                 float v2 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
                 float v3 = sprite.getFrameV(8.0D);
-
+                if (dir == Direction.DOWN || dir == Direction.UP) {
+                   // if (quad.getFlags() != 0){ // unoptimise everything till it breaks faster
+                    if (quad.getFlags() == 0b01){SodiumClientMod.logger().atInfo().log("UD what the fuck ALIGNED?");}
+                    if (quad.getFlags() == 0b10){SodiumClientMod.logger().atInfo().log("UD what the fuck PART ALIGNED?");}
+                    if (quad.getFlags() == 0b11){SodiumClientMod.logger().atInfo().log("UD what the fuck ALIGNED?");}
+                    if (quad.getFlags() == 0b00){}
+                }
+                else if (dir == Direction.NORTH || dir == Direction.EAST || dir == Direction.SOUTH || dir == Direction.WEST){
+                   // if(quad.getFlags() != 1) {
+                    if (quad.getFlags() == 0b01){}
+                    if (quad.getFlags() == 0b10){SodiumClientMod.logger().atInfo().log("what the fuck PART ALIGNED?");}
+                    if (quad.getFlags() == 0b11){}
+                    if (quad.getFlags() == 0b00){SodiumClientMod.logger().atInfo().log("what the fuck NOT ALIGNED?");}
+                }
                 quad.setSprite(sprite);
 
                 this.setVertex(quad, 0, x1, c1, z1, u2, v2);

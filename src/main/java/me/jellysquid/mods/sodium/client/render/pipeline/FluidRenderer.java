@@ -29,6 +29,7 @@ import net.minecraft.client.texture.Sprite;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.tag.FluidTags;
+import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
@@ -37,6 +38,9 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockRenderView;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
+import java.util.function.BiFunction;
 
 public class FluidRenderer {
     // TODO: allow this to be changed by vertex format
@@ -115,16 +119,14 @@ public class FluidRenderer {
         int posZ = pos.getZ();
 
         Fluid fluid = fluidState.getFluid();
+        List<Direction> isFaceExposed= new LinkedList<Direction>();
+        for(Direction dir : DirectionUtil.ALL_DIRECTIONS) {
+            if(this.isFluidExposed(world, posX, posY, posZ, dir, fluid)) {
+                    isFaceExposed.add(dir);
+            }
+        }
 
-        boolean sfUp = this.isFluidExposed(world, posX, posY, posZ, Direction.UP, fluid);
-        boolean sfDown = this.isFluidExposed(world, posX, posY, posZ, Direction.DOWN, fluid) &&
-                this.isSideExposed(world, posX, posY, posZ, Direction.DOWN, 0.8888889F);
-        boolean sfNorth = this.isFluidExposed(world, posX, posY, posZ, Direction.NORTH, fluid);
-        boolean sfSouth = this.isFluidExposed(world, posX, posY, posZ, Direction.SOUTH, fluid);
-        boolean sfWest = this.isFluidExposed(world, posX, posY, posZ, Direction.WEST, fluid);
-        boolean sfEast = this.isFluidExposed(world, posX, posY, posZ, Direction.EAST, fluid);
-
-        if (!sfUp && !sfDown && !sfEast && !sfWest && !sfNorth && !sfSouth) {
+        if (isFaceExposed.isEmpty()) {
             return false;
         }
 
@@ -142,180 +144,86 @@ public class FluidRenderer {
         float h3 = this.getCornerHeight(world, posX + 1, posY, posZ + 1, fluidState.getFluid());
         float h4 = this.getCornerHeight(world, posX + 1, posY, posZ, fluidState.getFluid());
 
-        float yOffset = sfDown ? EPSILON : 0.0F;
+        float yOffset = isFaceExposed.contains(Direction.DOWN) ? EPSILON : 0.0F;
 
         final ModelQuadViewMutable quad = this.quad;
 
         LightMode lightMode = isWater && MinecraftClient.isAmbientOcclusionEnabled() ? LightMode.SMOOTH : LightMode.FLAT;
         LightPipeline lighter = this.lighters.getLighter(lightMode);
 
-        quad.setFlags(0);
-
-        if (sfUp && this.isSideExposed(world, posX, posY, posZ, Direction.UP, Math.min(Math.min(h1, h2), Math.min(h3, h4)))) {
-            h1 -= EPSILON;
-            h2 -= EPSILON;
-            h3 -= EPSILON;
-            h4 -= EPSILON;
-
-            Vec3d velocity = fluidState.getVelocity(world, pos);
-
-            Sprite sprite;
-            ModelQuadFacing facing;
-            float u1, u2, u3, u4;
-            float v1, v2, v3, v4;
-
-            if (velocity.x == 0.0D && velocity.z == 0.0D) {
-                sprite = sprites[0];
-                facing = ModelQuadFacing.UP;
-                u1 = sprite.getFrameU(0.0D);
-                v1 = sprite.getFrameV(0.0D);
-                u2 = u1;
-                v2 = sprite.getFrameV(16.0D);
-                u3 = sprite.getFrameU(16.0D);
-                v3 = v2;
-                u4 = u3;
-                v4 = v1;
-            } else {
-                sprite = sprites[1];
-                facing = ModelQuadFacing.UNASSIGNED;
-                float dir = (float) MathHelper.atan2(velocity.z, velocity.x) - (1.5707964f);
-                float sin = MathHelper.sin(dir) * 0.25F;
-                float cos = MathHelper.cos(dir) * 0.25F;
-                u1 = sprite.getFrameU(8.0F + (-cos - sin) * 16.0F);
-                v1 = sprite.getFrameV(8.0F + (-cos + sin) * 16.0F);
-                u2 = sprite.getFrameU(8.0F + (-cos + sin) * 16.0F);
-                v2 = sprite.getFrameV(8.0F + (cos + sin) * 16.0F);
-                u3 = sprite.getFrameU(8.0F + (cos + sin) * 16.0F);
-                v3 = sprite.getFrameV(8.0F + (cos - sin) * 16.0F);
-                u4 = sprite.getFrameU(8.0F + (cos - sin) * 16.0F);
-                v4 = sprite.getFrameV(8.0F + (-cos - sin) * 16.0F);
-            }
-
-            float uAvg = (u1 + u2 + u3 + u4) / 4.0F;
-            float vAvg = (v1 + v2 + v3 + v4) / 4.0F;
-            float s1 = (float) sprites[0].getWidth() / (sprites[0].getMaxU() - sprites[0].getMinU());
-            float s2 = (float) sprites[0].getHeight() / (sprites[0].getMaxV() - sprites[0].getMinV());
-            float s3 = 4.0F / Math.max(s2, s1);
-
-            u1 = MathHelper.lerp(s3, u1, uAvg);
-            u2 = MathHelper.lerp(s3, u2, uAvg);
-            u3 = MathHelper.lerp(s3, u3, uAvg);
-            u4 = MathHelper.lerp(s3, u4, uAvg);
-            v1 = MathHelper.lerp(s3, v1, vAvg);
-            v2 = MathHelper.lerp(s3, v2, vAvg);
-            v3 = MathHelper.lerp(s3, v3, vAvg);
-            v4 = MathHelper.lerp(s3, v4, vAvg);
-
-            quad.setSprite(sprite);
-
-            this.setVertex(quad, 0, 0.0f, h1, 0.0f, u1, v1);
-            this.setVertex(quad, 1, 0.0f, h2, 1.0F, u2, v2);
-            this.setVertex(quad, 2, 1.0F, h3, 1.0F, u3, v3);
-            this.setVertex(quad, 3, 1.0F, h4, 0.0f, u4, v4);
-
-            this.calculateQuadColors(quad, world, pos, lighter, Direction.UP, 1.0F, colorizer, fluidState);
-
-            int vertexStart = this.writeVertices(buffers, offset, quad);
-
-            buffers.getIndexBufferBuilder(facing)
-                    .add(vertexStart, ModelQuadWinding.CLOCKWISE);
-
-            if (fluidState.method_15756(world, this.scratchPos.set(posX, posY + 1, posZ))) {
-                buffers.getIndexBufferBuilder(ModelQuadFacing.DOWN)
-                        .add(vertexStart, ModelQuadWinding.COUNTERCLOCKWISE);
-            }
-
-            rendered = true;
-        }
-
-        if (sfDown) {
-            Sprite sprite = sprites[0];
-
-            float minU = sprite.getMinU();
-            float maxU = sprite.getMaxU();
-            float minV = sprite.getMinV();
-            float maxV = sprite.getMaxV();
-            quad.setSprite(sprite);
-
-            this.setVertex(quad, 0, 0.0f, yOffset, 1.0F, minU, maxV);
-            this.setVertex(quad, 1, 0.0f, yOffset, 0.0f, minU, minV);
-            this.setVertex(quad, 2, 1.0F, yOffset, 0.0f, maxU, minV);
-            this.setVertex(quad, 3, 1.0F, yOffset, 1.0F, maxU, maxV);
-
-            this.calculateQuadColors(quad, world, pos, lighter, Direction.DOWN, 1.0F, colorizer, fluidState);
-
-            int vertexStart = this.writeVertices(buffers, offset, quad);
-
-            buffers.getIndexBufferBuilder(ModelQuadFacing.DOWN)
-                    .add(vertexStart, ModelQuadWinding.CLOCKWISE);
-
-            rendered = true;
-        }
-
-        this.quad.setFlags(ModelQuadFlags.IS_ALIGNED);
-
-        for (Direction dir : DirectionUtil.HORIZONTAL_DIRECTIONS) {
-            float c1;
-            float c2;
-            float x1;
-            float z1;
-            float x2;
-            float z2;
+        for (Direction dir : isFaceExposed.stream().toList()) {
+            float x1, x2, x3, x4;
+            float c1, c2, c3, c4;
+            float z1, z2, z3, z4;
+            float height;
 
             switch (dir) {
                 case NORTH:
-                    if (!sfNorth) {
-                        continue;
-                    }
-
-                    c1 = h1;
-                    c2 = h4;
-                    x1 = 0.0f;
-                    x2 = 1.0F;
-                    z1 = EPSILON;
-                    z2 = z1;
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = 1.0F;
+                    x3 = x4 = 0.0F;
+                    c1 = h4;
+                    c2 = c3 = yOffset;
+                    c4 = h1;
+                    z1 = z2 = z3 = z4 = EPSILON;
+                    height = Math.max(c1,c4);
                     break;
                 case SOUTH:
-                    if (!sfSouth) {
-                        continue;
-                    }
-
-                    c1 = h3;
-                    c2 = h2;
-                    x1 = 1.0F;
-                    x2 = 0.0f;
-                    z1 = 1.0f - EPSILON;
-                    z2 = z1;
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = 0.0F;
+                    x3 = x4 = 1.0F;
+                    c1 = h2;
+                    c2 = c3 = yOffset;
+                    c4 = h3;
+                    z1 = z2 = z3 = z4 = 1.0F - EPSILON;
+                    height = Math.max(c1,c4);
                     break;
                 case WEST:
-                    if (!sfWest) {
-                        continue;
-                    }
-
-                    c1 = h2;
-                    c2 = h1;
-                    x1 = EPSILON;
-                    x2 = x1;
-                    z1 = 1.0F;
-                    z2 = 0.0f;
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = x3 = x4 = EPSILON;
+                    c1 = h1;
+                    c2 = c3 = yOffset;
+                    c4 = h2;
+                    z1 = z2 = 0.0F;
+                    z3 = z4 = 1.0F;
+                    height = Math.max(c1,c4);
                     break;
                 case EAST:
-                    if (!sfEast) {
-                        continue;
-                    }
-
-                    c1 = h4;
-                    c2 = h3;
-                    x1 = 1.0f - EPSILON;
-                    x2 = x1;
-                    z1 = 0.0f;
-                    z2 = 1.0F;
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = x3 = x4 = 1.0F - EPSILON;
+                    c1 = h3;
+                    c2 = c3 = yOffset;
+                    c4 = h4;
+                    z1 = z2 = 1.0F;
+                    z3 = z4 = 0.0F;
+                    height = Math.max(c1,c4);
+                    break;
+                case UP:
+                    quad.setFlags(0);
+                    x1 = x2 = 0.0F;
+                    x3 = x4 = 1.0F;
+                    c1 = h1 - EPSILON;
+                    c2 = h2 - EPSILON;
+                    c3 = h3 - EPSILON;
+                    c4 = h4 - EPSILON;
+                    z1 = z4 = 0.0F;
+                    z2 = z3 = 1.0F;
+                    height = Math.min(Math.min(h1, h2), Math.min(h3, h4));
+                    break;
+                case DOWN:
+                    quad.setFlags(0);
+                    x1 = x2 = 0.0F;
+                    x3 = x4 = 1.0F;
+                    c1 = c2 = c3 = c4 = yOffset;
+                    z1 = z4 = 1.0F;
+                    z2 = z3 = 0.0F;
+                    height = 0.8888889F;
                     break;
                 default:
                     continue;
             }
 
-            if (this.isSideExposed(world, posX, posY, posZ, dir, Math.max(c1, c2))) {
+            if (this.isSideExposed(world, posX, posY, posZ, dir, height)) {
                 int adjX = posX + dir.getOffsetX();
                 int adjY = posY + dir.getOffsetY();
                 int adjZ = posZ + dir.getOffsetZ();
@@ -333,16 +241,16 @@ public class FluidRenderer {
 
                 float u1 = sprite.getFrameU(0.0D);
                 float u2 = sprite.getFrameU(8.0D);
-                float v1 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
-                float v2 = sprite.getFrameV((1.0F - c2) * 16.0F * 0.5F);
+                float v1 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
+                float v2 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
                 float v3 = sprite.getFrameV(8.0D);
 
                 quad.setSprite(sprite);
 
-                this.setVertex(quad, 0, x2, c2, z2, u2, v2);
-                this.setVertex(quad, 1, x2, yOffset, z2, u2, v3);
-                this.setVertex(quad, 2, x1, yOffset, z1, u1, v3);
-                this.setVertex(quad, 3, x1, c1, z1, u1, v1);
+                this.setVertex(quad, 0, x1, c1, z1, u2, v2);
+                this.setVertex(quad, 1, x2, c2, z2, u2, v3);
+                this.setVertex(quad, 2, x3, c3, z3, u1, v3);
+                this.setVertex(quad, 3, x4, c4, z4, u1, v1);
 
                 float br = dir.getAxis() == Direction.Axis.Z ? 0.8F : 0.6F;
 

@@ -250,16 +250,16 @@ public class FluidRenderer {
                 if (v1 > sprite.getMaxV() || v1 < sprite.getMinV()){
                     SodiumClientMod.logger().info("uh oh V1 OOB");
                 }
-                if (v2 > sprite.getMaxV() || v2 < sprite.getMinV()){
+                if (v2 >= sprite.getMaxV() || v2 <= sprite.getMinV()){
                     SodiumClientMod.logger().info("uh oh V2 OOB");
                 }
-                if (v3 > sprite.getMaxV() || v3 < sprite.getMinV()){
+                if (v3 >= sprite.getMaxV() || v3 <= sprite.getMinV()){
                     SodiumClientMod.logger().info("uh oh V3 OOB");
                 }
-                if (u1 > sprite.getMaxU() || u1 < sprite.getMinU()){
+                if (u1 >= sprite.getMaxU() || u1 <= sprite.getMinU()){
                     SodiumClientMod.logger().info("uh oh U1 OOB");
                 }
-                if (u2 > sprite.getMaxU() || u2 < sprite.getMinU()){
+                if (u2 >= sprite.getMaxU() || u2 <= sprite.getMinU()){
                     SodiumClientMod.logger().info("uh oh U2 OOB");
                 }
 

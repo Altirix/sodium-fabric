@@ -162,7 +162,7 @@ public class FluidRenderer {
 
             switch (dir) {
                 case NORTH:
-                    quad.setFlags(0b00);
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
                     x1 = x2 = 1.0F;
                     x3 = x4 = 0.0F;
                     c1 = h4;
@@ -172,7 +172,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case SOUTH:
-                    quad.setFlags(0b00);
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
                     x1 = x2 = 0.0F;
                     x3 = x4 = 1.0F;
                     c1 = h2;
@@ -182,7 +182,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case WEST:
-                    quad.setFlags(0b00);
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
                     x1 = x2 = x3 = x4 = EPSILON;
                     c1 = h1;
                     c2 = c3 = yOffset;
@@ -192,7 +192,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case EAST:
-                    quad.setFlags(0b00);
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
                     x1 = x2 = x3 = x4 = 1.0F - EPSILON;
                     c1 = h3;
                     c2 = c3 = yOffset;

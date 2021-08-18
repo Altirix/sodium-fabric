@@ -160,12 +160,13 @@ public class RenderRegionManager {
     }
 
     public void delete(CommandList commandList) {
+        if (this.stagingBuffer != null){
         for (RenderRegion region : this.regions.values()) {
             region.deleteResources(commandList);
         }
 
         this.regions.clear();
-        this.stagingBuffer.delete(commandList);
+        this.stagingBuffer.delete(commandList);}
     }
 
     public Collection<RenderRegion> getLoadedRegions() {

@@ -162,7 +162,7 @@ public class FluidRenderer {
 
             switch (dir) {
                 case NORTH:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    quad.setFlags(0b00);
                     x1 = x2 = 1.0F;
                     x3 = x4 = 0.0F;
                     c1 = h4;
@@ -172,7 +172,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case SOUTH:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    quad.setFlags(0b00);
                     x1 = x2 = 0.0F;
                     x3 = x4 = 1.0F;
                     c1 = h2;
@@ -182,7 +182,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case WEST:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    quad.setFlags(0b00);
                     x1 = x2 = x3 = x4 = EPSILON;
                     c1 = h1;
                     c2 = c3 = yOffset;
@@ -192,7 +192,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case EAST:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    quad.setFlags(0b00);
                     x1 = x2 = x3 = x4 = 1.0F - EPSILON;
                     c1 = h3;
                     c2 = c3 = yOffset;
@@ -248,19 +248,19 @@ public class FluidRenderer {
                 float v2 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
                 float v3 = sprite.getFrameV(8.0D);
                 if (v1 > sprite.getMaxV() || v1 < sprite.getMinV()){
-                    SodiumClientMod.logger().info("uh oh V1 OOB");
+                    SodiumClientMod.logger().info("uh oh V1 OOB/edge");
                 }
-                if (v2 >= sprite.getMaxV() || v2 <= sprite.getMinV()){
-                    SodiumClientMod.logger().info("uh oh V2 OOB");
+                if (v2 > sprite.getMaxV() || v2 < sprite.getMinV()){
+                    SodiumClientMod.logger().info("uh oh V2 OOB/edge");
                 }
-                if (v3 >= sprite.getMaxV() || v3 <= sprite.getMinV()){
-                    SodiumClientMod.logger().info("uh oh V3 OOB");
+                if (v3 > sprite.getMaxV() || v3 < sprite.getMinV()){
+                    SodiumClientMod.logger().info("uh oh V3 OOB/edge");
                 }
-                if (u1 >= sprite.getMaxU() || u1 <= sprite.getMinU()){
-                    SodiumClientMod.logger().info("uh oh U1 OOB");
+                if (u1 > sprite.getMaxU() || u1 < sprite.getMinU()){
+                    SodiumClientMod.logger().info("uh oh U1 OOB/edge");
                 }
-                if (u2 >= sprite.getMaxU() || u2 <= sprite.getMinU()){
-                    SodiumClientMod.logger().info("uh oh U2 OOB");
+                if (u2 > sprite.getMaxU() || u2 < sprite.getMinU()){
+                    SodiumClientMod.logger().info("uh oh U2 OOB/edge");
                 }
 
                 quad.setSprite(sprite);

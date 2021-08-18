@@ -247,16 +247,22 @@ public class FluidRenderer {
                 float v1 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
                 float v2 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
                 float v3 = sprite.getFrameV(8.0D);
-                if (dir == Direction.DOWN || dir == Direction.UP) {
-                    if (quad.getFlags() != 0) {
-                            SodiumClientMod.logger().atInfo().log("???");
-                        }
-                    }
-                else if (dir == Direction.NORTH || dir == Direction.EAST || dir == Direction.SOUTH || dir == Direction.WEST){
-                    if(quad.getFlags() != 1) {
-                        if (quad.getFlags() == 0b01){SodiumClientMod.logger().atInfo().log("???");}
-                    }
+                if (v1 > sprite.getMaxV() || v1 < sprite.getMinV()){
+                    SodiumClientMod.logger().info("uh oh V1 OOB");
                 }
+                if (v2 > sprite.getMaxV() || v2 < sprite.getMinV()){
+                    SodiumClientMod.logger().info("uh oh V2 OOB");
+                }
+                if (v3 > sprite.getMaxV() || v3 < sprite.getMinV()){
+                    SodiumClientMod.logger().info("uh oh V3 OOB");
+                }
+                if (u1 > sprite.getMaxU() || u1 < sprite.getMinU()){
+                    SodiumClientMod.logger().info("uh oh U1 OOB");
+                }
+                if (u2 > sprite.getMaxU() || u2 < sprite.getMinU()){
+                    SodiumClientMod.logger().info("uh oh U2 OOB");
+                }
+
                 quad.setSprite(sprite);
 
                 this.setVertex(quad, 0, x1, c1, z1, u2, v2);

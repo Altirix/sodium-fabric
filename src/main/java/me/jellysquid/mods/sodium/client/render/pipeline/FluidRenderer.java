@@ -199,7 +199,7 @@ public class FluidRenderer {
                     height = Math.max(c1,c4);
                     break;
                 case UP:
-                    quad.setFlags(0);
+                    quad.setFlags(0b00);
                     x1 = x2 = 0.0F;
                     x3 = x4 = 1.0F;
                     c1 = h1 - EPSILON;
@@ -211,7 +211,7 @@ public class FluidRenderer {
                     height = Math.min(Math.min(h1, h2), Math.min(h3, h4));
                     break;
                 case DOWN:
-                    quad.setFlags(0);
+                    quad.setFlags(0b00);
                     x1 = x2 = 0.0F;
                     x3 = x4 = 1.0F;
                     c1 = c2 = c3 = c4 = yOffset;

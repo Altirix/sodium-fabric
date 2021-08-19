@@ -1,5 +1,6 @@
 package me.jellysquid.mods.sodium.client.render.chunk.tasks;
 
+import me.jellysquid.mods.sodium.client.SodiumClientMod;
 import me.jellysquid.mods.sodium.client.render.chunk.RenderSection;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers;
 import me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildResult;
@@ -51,7 +52,7 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
         ChunkRenderData.Builder renderData = new ChunkRenderData.Builder();
         ChunkOcclusionDataBuilder occluder = new ChunkOcclusionDataBuilder();
         ChunkRenderBounds.Builder bounds = new ChunkRenderBounds.Builder();
-
+        RenderSection rs = this.render;
         buffers.init(renderData, this.render.getChunkId());
 
         cache.init(this.context);
@@ -146,7 +147,6 @@ public class ChunkRenderRebuildTask extends ChunkRenderBuildTask {
 
         renderData.setOcclusionData(occluder.build());
         renderData.setBounds(bounds.build(this.render.getChunkPos()));
-
         return new ChunkBuildResult(this.render, renderData.build(), meshes, this.frame);
     }
 

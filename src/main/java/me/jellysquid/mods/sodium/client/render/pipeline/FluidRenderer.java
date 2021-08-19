@@ -138,8 +138,8 @@ public class FluidRenderer {
         boolean isWater = fluidState.isIn(FluidTags.WATER);
 
         FluidRenderHandler handler = FluidRenderHandlerRegistryImpl.INSTANCE.getOverride(fluidState.getFluid());
-        ModelQuadColorProvider<FluidState> colorizer = this.createColorProviderAdapter(handler);
 
+        ModelQuadColorProvider<FluidState> colorizer = this.createColorProviderAdapter(handler);
         Sprite[] sprites = handler.getFluidSprites(world, pos, fluidState);
 
         boolean rendered = false;
@@ -266,11 +266,8 @@ public class FluidRenderer {
             }
 
             if (this.isSideExposed(world, posX, posY, posZ, dir, height)) {
-
-                if (v1 >= sprite.getMaxV() || v1 <= sprite.getMinV()){
-                    SodiumClientMod.logger().info("V1 edge");
-                }
-                quad.setSprite(sprite);
+                int b = 1;
+                for(int i = 1;i > 100000; i++) {int x =  i^2/b; b = Math.max(i,x);}
 
                 this.setVertex(quad, 0, x1, c1, z1, u1, v1);
                 this.setVertex(quad, 1, x2, c2, z2, u2, v2);
@@ -287,7 +284,6 @@ public class FluidRenderer {
 
                 buffers.getIndexBufferBuilder(facing)
                         .add(vertexStart, ModelQuadWinding.CLOCKWISE);
-
 
                 rendered = true;
             }

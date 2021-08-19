@@ -117,6 +117,8 @@ public class FluidRenderer {
     }
 
     public boolean render(BlockRenderView world, FluidState fluidState, BlockPos pos, BlockPos offset, ChunkModelBuilder buffers) {
+        // gross but simple water render, some reason makes opengl more prone to exploding. idk if this is related to the current opengl corruption but its similar.
+        // if you want to make it even more likely to break uncomment the loggers
         int posX = pos.getX();
         int posY = pos.getY();
         int posZ = pos.getZ();
@@ -158,48 +160,25 @@ public class FluidRenderer {
             float x1, x2, x3, x4;
             float c1, c2, c3, c4;
             float z1, z2, z3, z4;
+            float u1, u2, u3, u4;
+            float v1, v2, v3, v4;
             float height;
+            Sprite sprite;
 
             switch (dir) {
-                case NORTH:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
-                    x1 = x2 = 1.0F;
-                    x3 = x4 = 0.0F;
-                    c1 = h4;
-                    c2 = c3 = yOffset;
-                    c4 = h1;
-                    z1 = z2 = z3 = z4 = EPSILON;
-                    height = Math.max(c1,c4);
-                    break;
-                case SOUTH:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                case DOWN:
+                    quad.setFlags(0b00);
                     x1 = x2 = 0.0F;
                     x3 = x4 = 1.0F;
-                    c1 = h2;
-                    c2 = c3 = yOffset;
-                    c4 = h3;
-                    z1 = z2 = z3 = z4 = 1.0F - EPSILON;
-                    height = Math.max(c1,c4);
-                    break;
-                case WEST:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
-                    x1 = x2 = x3 = x4 = EPSILON;
-                    c1 = h1;
-                    c2 = c3 = yOffset;
-                    c4 = h2;
-                    z1 = z2 = 0.0F;
-                    z3 = z4 = 1.0F;
-                    height = Math.max(c1,c4);
-                    break;
-                case EAST:
-                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
-                    x1 = x2 = x3 = x4 = 1.0F - EPSILON;
-                    c1 = h3;
-                    c2 = c3 = yOffset;
-                    c4 = h4;
-                    z1 = z2 = 1.0F;
-                    z3 = z4 = 0.0F;
-                    height = Math.max(c1,c4);
+                    c1 = c2 = c3 = c4 = yOffset;
+                    z1 = z4 = 1.0F;
+                    z2 = z3 = 0.0F;
+                    height = 0.8888889F;
+                    sprite = sprites[0];
+                    u1 = u2 = sprite.getMinU();
+                    u3 = u4 = sprite.getMaxU();
+                    v1 = v4 = sprite.getMaxV();
+                    v2 = v3 = sprite.getMinV();
                     break;
                 case UP:
                     quad.setFlags(0b00);
@@ -212,63 +191,91 @@ public class FluidRenderer {
                     z1 = z4 = 0.0F;
                     z2 = z3 = 1.0F;
                     height = Math.min(Math.min(h1, h2), Math.min(h3, h4));
+                    sprite = sprites[0];
+                    u1 = u2 = sprite.getMinU();
+                    u3 = u4 = sprite.getMaxU();
+                    v1 = v4 = sprite.getMaxV();
+                    v2 = v3 = sprite.getMinV();
                     break;
-                case DOWN:
-                    quad.setFlags(0b00);
+                case NORTH:
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = 1.0F;
+                    x3 = x4 = 0.0F;
+                    c1 = h4;
+                    c2 = c3 = yOffset;
+                    c4 = h1;
+                    z1 = z2 = z3 = z4 = EPSILON;
+                    height = Math.max(c1,c4);
+                    sprite = sprites[1];
+                    u1 = u2 = sprite.getFrameU(8.0D);
+                    u3 = u4 = sprite.getFrameU(0.0D);
+                    v1 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
+                    v2 = v3 = sprite.getFrameV(8.0D);
+                    v4 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
+                    break;
+                case SOUTH:
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
                     x1 = x2 = 0.0F;
                     x3 = x4 = 1.0F;
-                    c1 = c2 = c3 = c4 = yOffset;
-                    z1 = z4 = 1.0F;
-                    z2 = z3 = 0.0F;
-                    height = 0.8888889F;
+                    c1 = h2;
+                    c2 = c3 = yOffset;
+                    c4 = h3;
+                    z1 = z2 = z3 = z4 = 1.0F - EPSILON;
+                    height = Math.max(c1,c4);
+                    sprite = sprites[1];
+                    u1 = u2 = sprite.getFrameU(8.0D);
+                    u3 = u4 = sprite.getFrameU(0.0D);
+                    v1 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
+                    v2 = v3 = sprite.getFrameV(8.0D);
+                    v4 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
+                    break;
+                case WEST:
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = x3 = x4 = EPSILON;
+                    c1 = h1;
+                    c2 = c3 = yOffset;
+                    c4 = h2;
+                    z1 = z2 = 0.0F;
+                    z3 = z4 = 1.0F;
+                    height = Math.max(c1,c4);
+                    sprite = sprites[1];
+                    u1 = u2 = sprite.getFrameU(8.0D);
+                    u3 = u4 = sprite.getFrameU(0.0D);
+                    v1 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
+                    v2 = v3 = sprite.getFrameV(8.0D);
+                    v4 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
+                    break;
+                case EAST:
+                    quad.setFlags(ModelQuadFlags.IS_ALIGNED);
+                    x1 = x2 = x3 = x4 = 1.0F - EPSILON;
+                    c1 = h3;
+                    c2 = c3 = yOffset;
+                    c4 = h4;
+                    z1 = z2 = 1.0F;
+                    z3 = z4 = 0.0F;
+                    height = Math.max(c1,c4);
+                    sprite = sprites[1];
+                    u1 = u2 = sprite.getFrameU(8.0D);
+                    u3 = u4 = sprite.getFrameU(0.0D);
+                    v1 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
+                    v2 = v3 = sprite.getFrameV(8.0D);
+                    v4 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
                     break;
                 default:
                     continue;
             }
 
             if (this.isSideExposed(world, posX, posY, posZ, dir, height)) {
-                int adjX = posX + dir.getOffsetX();
-                int adjY = posY + dir.getOffsetY();
-                int adjZ = posZ + dir.getOffsetZ();
 
-                Sprite sprite = sprites[1];
-
-                if (isWater) {
-                    BlockPos posAdj = this.scratchPos.set(adjX, adjY, adjZ);
-                    Block block = world.getBlockState(posAdj).getBlock();
-
-                    if (block == Blocks.GLASS || block instanceof StainedGlassBlock) {
-                        sprite = this.waterOverlaySprite;
-                    }
+                if (v1 >= sprite.getMaxV() || v1 <= sprite.getMinV()){
+                    SodiumClientMod.logger().info("V1 edge");
                 }
-
-                float u1 = sprite.getFrameU(0.0D);
-                float u2 = sprite.getFrameU(8.0D);
-                float v1 = sprite.getFrameV((1.0F - c4) * 16.0F * 0.5F);
-                float v2 = sprite.getFrameV((1.0F - c1) * 16.0F * 0.5F);
-                float v3 = sprite.getFrameV(8.0D);
-                if (v1 > sprite.getMaxV() || v1 < sprite.getMinV()){
-                    SodiumClientMod.logger().info("uh oh V1 OOB/edge");
-                }
-                if (v2 > sprite.getMaxV() || v2 < sprite.getMinV()){
-                    SodiumClientMod.logger().info("uh oh V2 OOB/edge");
-                }
-                if (v3 > sprite.getMaxV() || v3 < sprite.getMinV()){
-                    SodiumClientMod.logger().info("uh oh V3 OOB/edge");
-                }
-                if (u1 > sprite.getMaxU() || u1 < sprite.getMinU()){
-                    SodiumClientMod.logger().info("uh oh U1 OOB/edge");
-                }
-                if (u2 > sprite.getMaxU() || u2 < sprite.getMinU()){
-                    SodiumClientMod.logger().info("uh oh U2 OOB/edge");
-                }
-
                 quad.setSprite(sprite);
 
-                this.setVertex(quad, 0, x1, c1, z1, u2, v2);
-                this.setVertex(quad, 1, x2, c2, z2, u2, v3);
-                this.setVertex(quad, 2, x3, c3, z3, u1, v3);
-                this.setVertex(quad, 3, x4, c4, z4, u1, v1);
+                this.setVertex(quad, 0, x1, c1, z1, u1, v1);
+                this.setVertex(quad, 1, x2, c2, z2, u2, v2);
+                this.setVertex(quad, 2, x3, c3, z3, u3, v3);
+                this.setVertex(quad, 3, x4, c4, z4, u4, v4);
 
                 float br = dir.getAxis() == Direction.Axis.Z ? 0.8F : 0.6F;
 
@@ -281,10 +288,6 @@ public class FluidRenderer {
                 buffers.getIndexBufferBuilder(facing)
                         .add(vertexStart, ModelQuadWinding.CLOCKWISE);
 
-                if (sprite != this.waterOverlaySprite) {
-                    buffers.getIndexBufferBuilder(facing.getOpposite())
-                            .add(vertexStart, ModelQuadWinding.COUNTERCLOCKWISE);
-                }
 
                 rendered = true;
             }

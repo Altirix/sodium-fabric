@@ -126,18 +126,12 @@ float getAverageDistance(IndexGroup indexGroup) {
     float dist23 = length(rawPosition2 - rawPosition3);
     float dist31 = length(rawPosition3 - rawPosition1);
     vec4 rawPosition;
-    if(dist12 > dist23) {
-        if(dist12 > dist31) {
-            rawPosition = (rawPosition1 + rawPosition2) / 2;
-        } else {
-            rawPosition = (rawPosition3 + rawPosition1) / 2;
-        }
-    } else {
-        if(dist23 > dist31) {
-            rawPosition = (rawPosition2 + rawPosition3) / 2;
-        } else {
-            rawPosition = (rawPosition3 + rawPosition1) / 2;
-        }
+    if(dist12 > dist31) {
+        rawPosition = (rawPosition1 + rawPosition2) / 2;
+    } else if(dist23 > dist31) {
+        rawPosition = (rawPosition2 + rawPosition3) / 2;
+    }else {
+        rawPosition = (rawPosition3 + rawPosition1) / 2;
     }
 //    vec4 rawPosition = (rawPosition1 + rawPosition2 + rawPosition3) / 3;
 
@@ -151,14 +145,12 @@ float getAverageDistance(IndexGroup indexGroup) {
 //Convert an index into the indices array from [0..IndicesInChunk] to [0..IndicesInBuffer]
 uint getFullIndex(uint index) {
     ChunkMultiDrawRange subInfo = getSubInfo();
-    uint i = 0;
-    while(i < subInfo.DataCount) {
+    for (int i=0; i<subInfo.DataCount;i++){
         uint data = subInfo.DataOffset + i;
         if(index < getIndexLength(data)) {
             return getIndexOffset(data) + index * u_IndexLengthStride;
         }
         index = index - getIndexLength(data);
-        i = i + 1;
     }
     return DUMMY_INDEX;
 }

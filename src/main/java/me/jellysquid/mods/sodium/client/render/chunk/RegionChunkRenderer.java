@@ -16,6 +16,7 @@ import me.jellysquid.mods.sodium.client.gl.tessellation.GlTessellation;
 import me.jellysquid.mods.sodium.client.gl.tessellation.TessellationBinding;
 import me.jellysquid.mods.sodium.client.gl.util.ElementRange;
 import me.jellysquid.mods.sodium.client.gl.util.MultiDrawBatch;
+import me.jellysquid.mods.sodium.client.gui.SodiumGameOptions;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFacing;
 import me.jellysquid.mods.sodium.client.model.vertex.type.ChunkVertexType;
 import me.jellysquid.mods.sodium.client.render.chunk.data.ChunkRenderBounds;
@@ -41,6 +42,7 @@ public class RegionChunkRenderer extends ShaderChunkRenderer {
     private final GlMutableBuffer batchSubData;
     private final ByteBuffer batchSubDataBuffer;
     private final boolean isBlockFaceCullingEnabled = SodiumClientMod.options().advanced.useBlockFaceCulling;
+    private final boolean isTranslucentFaceSortingEnabled = SodiumClientMod.options().advanced.useTranslucentFaceSorting;
 
     private double lastUpdateX = 0;
     private double lastUpdateY = 0;
@@ -133,38 +135,33 @@ public class RegionChunkRenderer extends ShaderChunkRenderer {
                 RenderRegion region = entry.getKey();
                 List<RenderSection> regionSections = entry.getValue();
 
-                if(fullRebuild) {
-                    region.setNeedsTranslucencyCompute(fullRebuild);
-                    if(!runCompute) {
-                        continue;
-                    }
-                }
+                if(fullRebuild) { region.setNeedsTranslucencyCompute(true);}
 
-                if (!buildDrawBatches(regionSections, pass, camera)) {
+                if (!runCompute || !buildDrawBatches(regionSections, pass, camera)) { // dont think this changes anything? works fine but not tested
                     continue;
                 }
 
                 //TODO Clean up, fix lag spikes, fix water
-                if (runCompute && region.getNeedsTranslucencyCompute()) {
-                    if (!regionSections.isEmpty()) {
-                        float x = getCameraTranslation(region.getOriginX(), camera.blockX, camera.deltaX);
-                        float y = getCameraTranslation(region.getOriginY(), camera.blockY, camera.deltaY);
-                        float z = getCameraTranslation(region.getOriginZ(), camera.blockZ, camera.deltaZ);
+                if (region.getNeedsTranslucencyCompute()) {
+                    if (regionSections.isEmpty()) {continue; }
 
-                        Matrix4f matrix = matrixStack.peek()
-                                .getModel()
-                                .copy();
-                        matrix.multiplyByTranslation(x, y, z);
+                    float x = getCameraTranslation(region.getOriginX(), camera.blockX, camera.deltaX);
+                    float y = getCameraTranslation(region.getOriginY(), camera.blockY, camera.deltaY);
+                    float z = getCameraTranslation(region.getOriginZ(), camera.blockZ, camera.deltaZ);
 
-                        compute.getInterface().setModelViewMatrix(matrix);
-                        compute.getInterface().setDrawUniforms(this.chunkInfoBuffer);
-                        compute.getInterface().setup(vertexType);
+                    Matrix4f matrix = matrixStack.peek()
+                            .getModel()
+                            .copy();
+                    matrix.multiplyByTranslation(x, y, z);
 
-                        RenderRegion.RenderRegionArenas arenas = region.getArenas();
-                        //TODO Move all of compute outside of rendering
-                        runCompute = compute.getInterface().execute(commandList, batch, arenas);
-                        region.setNeedsTranslucencyCompute(false);
-                    }
+                    compute.getInterface().setModelViewMatrix(matrix);
+                    compute.getInterface().setDrawUniforms(this.chunkInfoBuffer);
+                    compute.getInterface().setup(vertexType);
+
+                    RenderRegion.RenderRegionArenas arenas = region.getArenas();
+                    //TODO Move all of compute outside of rendering
+                    runCompute = compute.getInterface().execute(commandList, batch, arenas);
+                    region.setNeedsTranslucencyCompute(false);
                 }
                 if(!runCompute && !fullRebuild) {
                     break;
@@ -208,8 +205,7 @@ public class RegionChunkRenderer extends ShaderChunkRenderer {
                     .getOffset() / this.vertexFormat.getStride();
 
             this.addDrawCall(state.getModelPart(ModelQuadFacing.UNASSIGNED), indexOffset, baseVertex);
-
-            if (this.isBlockFaceCullingEnabled && !pass.isTranslucent()) {
+            if (this.isBlockFaceCullingEnabled && !(pass.isTranslucent() && this.isTranslucentFaceSortingEnabled)) {
                 if (camera.posY > bounds.y1) {
                     this.addDrawCall(state.getModelPart(ModelQuadFacing.UP), indexOffset, baseVertex);
                 }

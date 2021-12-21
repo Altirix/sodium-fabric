@@ -14,11 +14,11 @@ struct Uniforms {
     vec4 offset;
 };
 
-layout(std430, binding = 0) readonly buffer ssbo_Vertices {
+layout(std430, binding = 0) buffer ssbo_Vertices {
     BlockVertex vertices[];
 };
 
-layout(std140, binding = 1) uniform ubo_InstanceUniforms {
+layout(std140, binding = 0) uniform ubo_InstanceUniforms {
     Uniforms instanceUniforms[MAX_DRAWS];
 };
 

@@ -41,8 +41,8 @@ uint _get_instance_index() {
     uint mask78 = uint(0xFF000000u);
     uint vertIDU = uint(gl_VertexID);
     uint vertIDMask = vertIDU & mask78;
-    uint u24 = uint(24u);
-    uint vertIDMaskShift = vertIDMask >> u24;
+    uint vertIDMaskShift = vertIDMask >> 23u;
+    // why does 24u corrupt everything
     return vertIDMaskShift;
 }
 

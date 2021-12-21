@@ -31,28 +31,46 @@ out float v_FragDistance;
 #endif
 
 uint _get_vertex_index() {
-    return uint(gl_VertexID) & 0x00FFFFFFu;
+    uint mask123456 = uint(0x00FFFFFFu);
+    uint vertIDU = uint(gl_VertexID);
+    uint vertIDMask = vertIDU & mask123456;
+    return vertIDMask;
 }
 
 uint _get_instance_index() {
-    return (uint(gl_VertexID) & 0xFF000000u) >> 24u;
+    uint mask78 = uint(0xFF000000u);
+    uint vertIDU = uint(gl_VertexID);
+    uint vertIDMask = vertIDU & mask78;
+    uint u24 = uint(24u);
+    uint vertIDMaskShift = vertIDMask >> u24;
+    return vertIDMaskShift;
 }
 
 #import <sodium:include/fog.glsl>
 
 void _emit_vertex(Vertex vertex, vec3 offset) {;
     // Transform the chunk-local vertex position into world model space
-    vec3 position = offset + vertex.position;
+    vec3 vertPostmp = vertex.position;
+    vec3 position = offset + vertPostmp;
 
 #ifdef USE_FOG
     v_FragDistance = length(position);
 #endif
 
     // Transform the vertex position into model-view-projection space
-    gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * vec4(position, 1.0);
+    mat4 mvmtemp = u_ModelViewMatrix;
+    mat4 pmtemp = u_ProjectionMatrix;
+    vec4 posv4 = vec4(position, 1.0);
+    vec4 temp2 = mvmtemp * posv4;
+    vec4 glpos = pmtemp * temp2;
+    gl_Position = glpos;
 
     // Pass the color and texture coordinates to the fragment shader
-    v_ColorAndShade = vertex.color_and_shade;
-    v_LightCoord = vertex.tex_light_coord;
-    v_TexCoord = vertex.tex_diffuse_coord;
+    vec4 vcs = vertex.color_and_shade;
+    vec2 vlc = vertex.tex_light_coord;
+    vec2 vdc = vertex.tex_diffuse_coord;
+
+    v_ColorAndShade = vcs;
+    v_LightCoord = vlc;
+    v_TexCoord = vdc;
 }

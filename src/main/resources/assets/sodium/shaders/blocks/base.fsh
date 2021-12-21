@@ -28,7 +28,7 @@ void _emit_frag() {
     vec4 sampleLightTex = texture(u_LightTex, v_LightCoord);
 
     vec4 diffuseColor = (sampleBlockTex * sampleLightTex);
-    diffuseColor.rgb *= v_ColorAndShade.rgb * v_ColorAndShade.a;
+    diffuseColor.rgb *= (v_ColorAndShade.rgb * v_ColorAndShade.a);
 
     fragColor = _linearFog(diffuseColor, v_FragDistance, u_FogColor, u_FogStart, u_FogEnd);
 }

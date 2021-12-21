@@ -34,7 +34,7 @@ layout(std430, binding = 1) readonly buffer ssbo_Vertices {
     BlockVertex vertices[];
 };
 
-layout(std140, binding = 0) uniform ubo_InstanceUniforms {
+layout(std140, binding = 2) uniform ubo_InstanceUniforms {
     Uniforms instanceUniforms[MAX_DRAWS];
 };
 
@@ -62,28 +62,72 @@ const vec2[VERTICES_PER_FACE] TEXTURE_MAP_MAX = {
 };
 
 Vertex _get_vertex(Uniforms uniforms) {
+    Uniforms localu = uniforms;
+
+    uint u4 = uint(4u);
+    uint u8 = uint(8u);
+    uint u16 = uint(16u);
+    uint u24 = uint(24u);
+
     uint vertex_index = _get_vertex_index();
 
-    uint corner_index = vertex_index % 4u;
-    uint quad_index = vertex_index / 4u;
+    uint corner_index = vertex_index % u4;
+    uint quad_index = vertex_index / u4;
 
-    Quad quad = quads[uniforms.quad_offset + quad_index];
-    vec3 block_position = vec3((quad.position_id & 0xFF000000u) >> 24u, (quad.position_id & 0x00FF0000u) >> 16u, (quad.position_id & 0x0000FF00u) >> 8u);
-    vec3 position = block_position + CUBE_VERTICES[quad.position_id & 0x000000FFu][corner_index];
-    vec2 tex_light_coord = vec2(unpackUnorm4x8(quad.tex_light_block)[corner_index],
-        unpackUnorm4x8(quad.tex_light_sky)[corner_index]);
-    vec2 tex_diffuse_coord = (unpackUnorm2x16(quad.tex_diffuse_min) * TEXTURE_MAP_MIN[corner_index]) +
-        (unpackUnorm2x16(quad.tex_diffuse_max) * TEXTURE_MAP_MAX[corner_index]);
+    uint quadoffset = localu.quad_offset;
+    uint quadRealIndex = quadoffset + quad_index;
 
-    BlockVertex vertex = vertices[uniforms.vertex_offset + vertex_index];
-    vec4 color_and_shade = unpackUnorm4x8(vertex.tint);
+    Quad quad = quads[quadRealIndex];
+    uint mask78 = uint(0xFF000000u);
+    uint mask56 = uint(0x00FF0000u);
+    uint mask34 = uint(0x0000FF00u);
+    uint mask12 = uint(0x000000FFu);
+    uint quadposID = quad.position_id;
+    uint quadpos78 = (quadposID & mask78);
+    uint quadpos56 = (quadposID & mask56);
+    uint quadpos34 = (quadposID & mask34);
+    uint quadpos12 = (quadposID & mask12);
 
-    return Vertex(position, tex_diffuse_coord, tex_light_coord, color_and_shade);
+    uint qPosS24 = quadpos78>> u24;
+    uint qPosS16 = quadpos56>> u16;
+    uint qposS8 = quadpos34>> u8;
+
+    vec3 block_position = vec3(qPosS24, qPosS16, qposS8);
+    vec3 cubeVert = CUBE_VERTICES[quadpos12][corner_index];
+    vec3 position = block_position + cubeVert;
+
+    uint tlb = quad.tex_light_block;
+    uint tls = quad.tex_light_sky;
+    vec4 unb = unpackUnorm4x8(tlb);
+    vec4 uns = unpackUnorm4x8(tls);
+    float up48b = unb[corner_index];
+    float up48s = uns[corner_index];
+    vec2 tex_light_coord = vec2(up48b, up48s);
+
+    uint tdmin = quad.tex_diffuse_min;
+    uint tdmax = quad.tex_diffuse_max;
+    vec2 up216min = unpackUnorm2x16(tdmin);
+    vec2 up216max = unpackUnorm2x16(tdmax);
+    vec2 tmmin = TEXTURE_MAP_MIN[corner_index];
+    vec2 tmmax = TEXTURE_MAP_MAX[corner_index];
+    vec2 tex_diffuse_coord = (up216min * tmmin) + (up216max * tmmax);
+
+    uint vertOffset = localu.vertex_offset;
+    uint realVertId = vertOffset + vertex_index;
+    BlockVertex vertex = vertices[realVertId];
+
+    uint tnt = vertex.tint;
+    vec4 color_and_shade = unpackUnorm4x8(tnt);
+
+    Vertex vrt = Vertex(position, tex_diffuse_coord, tex_light_coord, color_and_shade);
+    return vrt;
 }
 
 void main() {
-    Uniforms uniforms = instanceUniforms[_get_instance_index()];
+    uint instance_local = _get_instance_index();
+    Uniforms uniforms = instanceUniforms[instance_local];
     Vertex vertex = _get_vertex(uniforms);
+    vec3 xyz = uniforms.offset.xyz;
 
-    _emit_vertex(vertex, uniforms.offset.xyz);
+    _emit_vertex(vertex, xyz);
 }

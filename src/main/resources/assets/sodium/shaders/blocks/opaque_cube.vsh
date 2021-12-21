@@ -26,11 +26,11 @@ struct Uniforms {
     vec4 offset;
 };
 
-layout(std430, binding = 0) buffer ssbo_Quads {
+layout(std430, binding = 0) readonly buffer ssbo_Quads {
     Quad quads[];
 };
 
-layout(std430, binding = 1) buffer ssbo_Vertices {
+layout(std430, binding = 1) readonly buffer ssbo_Vertices {
     BlockVertex vertices[];
 };
 

@@ -103,6 +103,84 @@ public class FluidRenderer {
 
         return true;
     }
+//////////
+//////////
+//////////
+
+    // method_40077
+    private float fluidCornerHeight(BlockRenderView world, Fluid fluid, float fluidHeight, float fluidHeightX, float fluidHeightY, BlockPos blockPos) {
+        if (fluidHeightY >= 1.0f || fluidHeightX >= 1.0f) {
+            return 1.0f;
+        }
+
+        float totalHeight = 0.0f;
+        int samples = 0;
+
+        if (fluidHeightY > 0.0f || fluidHeightX > 0.0f) {
+            float height = this.fluidHeight(world,fluid,blockPos);
+
+            if (height >= 1.0f) {
+                return 1.0f;
+            }
+            // method_40080
+            if (height >= 0.8f) {
+                totalHeight = totalHeight + height * 10.0f;
+                samples = samples + 10;
+            } else if (height >= 0.0f) {
+                totalHeight = totalHeight + height;
+                samples = samples + 1;
+            }
+        }
+        // method_40080
+        if (fluidHeight >= 0.8f) {
+            totalHeight = totalHeight + fluidHeight * 10.0f;
+            samples = samples + 10;
+        } else if (fluidHeight >= 0.0f) {
+            totalHeight = totalHeight + fluidHeight;
+            samples = samples + 1;
+        }
+        // method_40080
+        if (fluidHeightY >= 0.8f) {
+            totalHeight = totalHeight + fluidHeightY * 10.0f;
+            samples = samples + 10;
+        } else if (fluidHeightY >= 0.0f) {
+            totalHeight = totalHeight + fluidHeightY;
+            samples = samples + 1;
+        }
+        // method_40080
+        if (fluidHeightX >= 0.8f) {
+            totalHeight = totalHeight + fluidHeightX * 10.0f;
+            samples = samples + 10;
+        } else if (fluidHeightX >= 0.0f) {
+            totalHeight = totalHeight + fluidHeightX;
+            samples = samples + 1;
+        }
+
+        return totalHeight / samples;
+    }
+
+    //method_40079
+    private float fluidHeight(BlockRenderView world, Fluid fluid, BlockPos blockPos) {
+        BlockState blockState = world.getBlockState(blockPos);
+        FluidState fluidState = blockState.getFluidState();
+
+        if (fluid.matchesType(fluidState.getFluid())) {
+            FluidState fluidStateUp = world.getFluidState(blockPos.up());
+
+            if (fluid.matchesType(fluidStateUp.getFluid())) {
+                return 1.0f;
+            }
+            return fluidState.getHeight();
+        }
+        if (!blockState.getMaterial().isSolid()) {
+            return 0.0f;
+        }
+        return -1.0f;
+    }
+
+//////////
+//////////
+//////////
 
     public boolean render(BlockRenderView world, FluidState fluidState, BlockPos pos, BlockPos offset, ChunkModelBuilder buffers) {
         int posX = pos.getX();
@@ -132,10 +210,37 @@ public class FluidRenderer {
 
         boolean rendered = false;
 
-        float h1 = this.getCornerHeight(world, posX, posY, posZ, fluidState.getFluid());
-        float h2 = this.getCornerHeight(world, posX, posY, posZ + 1, fluidState.getFluid());
-        float h3 = this.getCornerHeight(world, posX + 1, posY, posZ + 1, fluidState.getFluid());
-        float h4 = this.getCornerHeight(world, posX + 1, posY, posZ, fluidState.getFluid());
+//        float h1 = this.getCornerHeight(world, posX, posY, posZ, fluidState.getFluid());
+//        float h2 = this.getCornerHeight(world, posX, posY, posZ + 1, fluidState.getFluid());
+//        float h3 = this.getCornerHeight(world, posX + 1, posY, posZ + 1, fluidState.getFluid());
+//        float h4 = this.getCornerHeight(world, posX + 1, posY, posZ, fluidState.getFluid());
+
+//////////
+//////////
+//////////
+
+        float fluidHeight = this.fluidHeight(world, fluid, pos);
+        float h1,h2,h3,h4;
+        if (fluidHeight >= 1.0f) {
+            h1 = 1.0f;
+            h2 = 1.0f;
+            h3 = 1.0f;
+            h4 = 1.0f;
+        } else {
+            float fluidHeightNorth = this.fluidHeight(world, fluid, pos.north());
+            float fluidHeightSouth = this.fluidHeight(world, fluid, pos.south());
+            float fluidHeightEast = this.fluidHeight(world, fluid, pos.east());
+            float fluidHeightWest = this.fluidHeight(world, fluid, pos.west());
+            h1 = this.fluidCornerHeight(world, fluid, fluidHeight, fluidHeightNorth, fluidHeightWest, pos.offset(Direction.NORTH).offset(Direction.WEST));
+            h2 = this.fluidCornerHeight(world, fluid, fluidHeight, fluidHeightSouth, fluidHeightWest, pos.offset(Direction.SOUTH).offset(Direction.WEST));
+            h3 = this.fluidCornerHeight(world, fluid, fluidHeight, fluidHeightSouth, fluidHeightEast, pos.offset(Direction.SOUTH).offset(Direction.EAST));
+            h4 = this.fluidCornerHeight(world, fluid, fluidHeight, fluidHeightNorth, fluidHeightEast, pos.offset(Direction.NORTH).offset(Direction.EAST));
+        }
+
+
+//////////
+//////////
+//////////
 
         float yOffset = sfDown ? 0.0F : EPSILON;
 
@@ -148,8 +253,8 @@ public class FluidRenderer {
 
         if (!sfUp && this.isSideExposed(world, posX, posY, posZ, Direction.UP, Math.min(Math.min(h1, h2), Math.min(h3, h4)))) {
             h1 -= EPSILON;
-            h2 -= EPSILON;
             h3 -= EPSILON;
+            h2 -= EPSILON;
             h4 -= EPSILON;
 
             Vec3d velocity = fluidState.getVelocity(world, pos);

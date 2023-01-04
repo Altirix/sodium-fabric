@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import me.jellysquid.mods.sodium.client.model.vertex.VanillaVertexTypes;
 import me.jellysquid.mods.sodium.client.model.vertex.VertexDrain;
-import me.jellysquid.mods.sodium.client.util.MathUtil;
 import me.jellysquid.mods.sodium.client.util.color.ColorABGR;
 import me.jellysquid.mods.sodium.client.util.color.ColorARGB;
 import me.jellysquid.mods.sodium.client.util.color.ColorMixer;
@@ -24,8 +23,6 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.biome.Biome;
-import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL30C;
@@ -35,6 +32,23 @@ import java.io.InputStream;
 
 public class CloudRenderer {
     private static final Identifier CLOUDS_TEXTURE_ID = new Identifier("textures/environment/clouds.png");
+
+    private static final int MAX_SINGLE_CLOUD_SIZE = 3072;
+    // 256x256 px cloud.png is 12x12 units
+    // 3072 / 256 = 12
+    // 3072 / 1024 = 3
+    private static final int CLOUD_PIXELS_TO_FOG_DISTANCE = 2048;
+    // 256x256 px cloud.png starts fog 8x from cloud render distance
+    // 2048 / 256 = 8
+    // 2048 / 1024 = 2
+    private static final float CLOUD_PIXELS_TO_MINIMUM_RENDER_DISTANCE = 0.125F;
+    // 256x256 px cloud.png results in a minimum render distance of 32
+    // 256 / 8 = 32
+    // 1024 / 8 = 128
+    private static final float CLOUD_PIXELS_TO_MAXIMUM_RENDER_DISTANCE = 0.0078125F;
+    // 256x256 px cloud.png results in render distance multiplier of 2
+    // 256 / 128 = 2
+    // 1024 / 128 = 8
 
     private static final int CLOUD_COLOR_NEG_Y = ColorABGR.pack(0.7F, 0.7F, 0.7F, 1.0f);
     private static final int CLOUD_COLOR_POS_Y = ColorABGR.pack(1.0f, 1.0f, 1.0f, 1.0f);
@@ -58,6 +72,17 @@ public class CloudRenderer {
 
     private int prevCenterCellX, prevCenterCellY, cachedRenderDistance;
 
+    private int cloudSizeX, cloudSizeZ, fogDistanceMultiplier, cloudDistanceMinimum, cloudDistanceMaximum;
+
+    public void updateMagicValues(){
+        this.cloudSizeX = MAX_SINGLE_CLOUD_SIZE / this.edges.width;
+        this.cloudSizeZ = MAX_SINGLE_CLOUD_SIZE / this.edges.height;
+        this.fogDistanceMultiplier = CLOUD_PIXELS_TO_FOG_DISTANCE / this.edges.width;
+        this.cloudDistanceMinimum = (int) (this.edges.width * CLOUD_PIXELS_TO_MINIMUM_RENDER_DISTANCE);
+        this.cloudDistanceMaximum = (int) (this.edges.width * CLOUD_PIXELS_TO_MAXIMUM_RENDER_DISTANCE);
+
+    }
+
     public CloudRenderer(ResourceFactory factory) {
         this.reloadTextures(factory);
     }
@@ -76,10 +101,10 @@ public class CloudRenderer {
         double cloudCenterZ = (cameraZ) + 0.33D;
 
         int renderDistance = MinecraftClient.getInstance().options.getClampedViewDistance();
-        int cloudDistance = Math.max(32, (renderDistance * 2) + 9);
+        int cloudDistance = Math.max(cloudDistanceMinimum, renderDistance * cloudDistanceMaximum + 9);
 
-        int centerCellX = (int) (Math.floor(cloudCenterX / 12));
-        int centerCellZ = (int) (Math.floor(cloudCenterZ / 12));
+        int centerCellX = (int) (Math.floor(cloudCenterX / cloudSizeX));
+        int centerCellZ = (int) (Math.floor(cloudCenterZ / cloudSizeZ));
 
         if (this.vertexBuffer == null || this.prevCenterCellX != centerCellX || this.prevCenterCellY != centerCellZ || this.cachedRenderDistance != renderDistance) {
             BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
@@ -103,17 +128,17 @@ public class CloudRenderer {
 
         float previousEnd = RenderSystem.getShaderFogEnd();
         float previousStart = RenderSystem.getShaderFogStart();
-        fogData.fogEnd = cloudDistance * 8;
-        fogData.fogStart = (cloudDistance * 8) - 16;
 
-        applyFogModifiers(world, fogData, player, cloudDistance * 8, tickDelta);
+        fogData.fogEnd = cloudDistance * fogDistanceMultiplier;
+        fogData.fogStart = (cloudDistance * fogDistanceMultiplier) - 16;
 
+        applyFogModifiers(world, fogData, player, (cloudDistance * fogDistanceMultiplier), tickDelta);
 
         RenderSystem.setShaderFogEnd(fogData.fogEnd);
         RenderSystem.setShaderFogStart(fogData.fogStart);
 
-        float translateX = (float) (cloudCenterX - (centerCellX * 12));
-        float translateZ = (float) (cloudCenterZ - (centerCellZ * 12));
+        float translateX = (float) (cloudCenterX - (centerCellX * cloudSizeX));
+        float translateZ = (float) (cloudCenterZ - (centerCellZ * cloudSizeZ));
 
         RenderSystem.enableDepthTest();
 
@@ -223,26 +248,26 @@ public class CloudRenderer {
 
                 int baseColor = this.edges.getColor(centerCellX + offsetX, centerCellZ + offsetZ);
 
-                float x = offsetX * 12;
-                float z = offsetZ * 12;
+                float x = offsetX * cloudSizeX;
+                float z = offsetZ * cloudSizeZ;
 
                 // -Y
                 if ((connectedEdges & DIR_NEG_Y) != 0) {
                     int mixedColor = ColorMixer.mulARGB(baseColor, CLOUD_COLOR_NEG_Y);
                     sink.ensureCapacity(4);
-                    sink.writeQuad(x + 12, 0.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 0.0f, 0.0f, z + 12, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 0.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + 0.0f, 0.0f, z + cloudSizeZ, mixedColor);
                     sink.writeQuad(x + 0.0f, 0.0f, z + 0.0f, mixedColor);
-                    sink.writeQuad(x + 12, 0.0f, z + 0.0f, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 0.0f, z + 0.0f, mixedColor);
                 }
 
                 // +Y
                 if ((connectedEdges & DIR_POS_Y) != 0) {
                     int mixedColor = ColorMixer.mulARGB(baseColor, CLOUD_COLOR_POS_Y);
                     sink.ensureCapacity(4);
-                    sink.writeQuad(x + 0.0f, 4.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 12, 4.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 12, 4.0f, z + 0.0f, mixedColor);
+                    sink.writeQuad(x + 0.0f, 4.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 4.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 4.0f, z + 0.0f, mixedColor);
                     sink.writeQuad(x + 0.0f, 4.0f, z + 0.0f, mixedColor);
                 }
 
@@ -250,8 +275,8 @@ public class CloudRenderer {
                 if ((connectedEdges & DIR_NEG_X) != 0) {
                     int mixedColor = ColorMixer.mulARGB(baseColor, CLOUD_COLOR_NEG_X);
                     sink.ensureCapacity(4);
-                    sink.writeQuad(x + 0.0f, 0.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 0.0f, 4.0f, z + 12, mixedColor);
+                    sink.writeQuad(x + 0.0f, 0.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + 0.0f, 4.0f, z + cloudSizeZ, mixedColor);
                     sink.writeQuad(x + 0.0f, 4.0f, z + 0.0f, mixedColor);
                     sink.writeQuad(x + 0.0f, 0.0f, z + 0.0f, mixedColor);
                 }
@@ -260,18 +285,18 @@ public class CloudRenderer {
                 if ((connectedEdges & DIR_POS_X) != 0) {
                     int mixedColor = ColorMixer.mulARGB(baseColor, CLOUD_COLOR_POS_X);
                     sink.ensureCapacity(4);
-                    sink.writeQuad(x + 12, 4.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 12, 0.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 12, 0.0f, z + 0.0f, mixedColor);
-                    sink.writeQuad(x + 12, 4.0f, z + 0.0f, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 4.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 0.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 0.0f, z + 0.0f, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 4.0f, z + 0.0f, mixedColor);
                 }
 
                 // -Z
                 if ((connectedEdges & DIR_NEG_Z) != 0) {
                     int mixedColor = ColorMixer.mulARGB(baseColor, CLOUD_COLOR_NEG_Z);
                     sink.ensureCapacity(4);
-                    sink.writeQuad(x + 12, 4.0f, z + 0.0f, mixedColor);
-                    sink.writeQuad(x + 12, 0.0f, z + 0.0f, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 4.0f, z + 0.0f, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 0.0f, z + 0.0f, mixedColor);
                     sink.writeQuad(x + 0.0f, 0.0f, z + 0.0f, mixedColor);
                     sink.writeQuad(x + 0.0f, 4.0f, z + 0.0f, mixedColor);
                 }
@@ -280,10 +305,10 @@ public class CloudRenderer {
                 if ((connectedEdges & DIR_POS_Z) != 0) {
                     int mixedColor = ColorMixer.mulARGB(baseColor, CLOUD_COLOR_POS_Z);
                     sink.ensureCapacity(4);
-                    sink.writeQuad(x + 12, 0.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 12, 4.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 0.0f, 4.0f, z + 12, mixedColor);
-                    sink.writeQuad(x + 0.0f, 0.0f, z + 12, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 0.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + cloudSizeX, 4.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + 0.0f, 4.0f, z + cloudSizeZ, mixedColor);
+                    sink.writeQuad(x + 0.0f, 0.0f, z + cloudSizeZ, mixedColor);
                 }
             }
         }
@@ -292,6 +317,8 @@ public class CloudRenderer {
     }
 
     public void reloadTextures(ResourceFactory factory) {
+        //TODO check if loaded resource will exceed the max byte buffer size (Integer.MAX_VALUE)
+        // will crash the game with "out of memory"
         this.edges = createCloudEdges();
 
         if (clouds != null) {
@@ -313,6 +340,8 @@ public class CloudRenderer {
             this.vertexBuffer.close();
             this.vertexBuffer = null;
         }
+
+        updateMagicValues();
     }
 
     public void destroy() {
@@ -349,8 +378,6 @@ public class CloudRenderer {
             int width = texture.getWidth();
             int height = texture.getHeight();
 
-            Validate.isTrue(MathUtil.isPowerOfTwo(width), "Texture width must be power-of-two");
-            Validate.isTrue(MathUtil.isPowerOfTwo(height), "Texture height must be power-of-two");
 
             this.edges = new byte[width * height];
             this.colors = new int[width * height];
@@ -413,9 +440,8 @@ public class CloudRenderer {
         }
 
         private static int index(int posX, int posZ, int width, int height) {
-            return (wrap(posX, width) * width) + wrap(posZ, height);
+            return (wrap(posX, width) * height) + wrap(posZ, height);
         }
-
         private static int wrap(int pos, int dim) {
             return (pos & (dim - 1));
         }

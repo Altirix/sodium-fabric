@@ -98,7 +98,7 @@ public class CloudRenderer {
 
         double cloudTime = (ticks + tickDelta) * 0.03F;
         double cloudCenterX = (cameraX + cloudTime);
-        double cloudCenterZ = (cameraZ) + 4;
+        double cloudCenterZ = (cameraZ) + 3.96F;
 
         int renderDistance = MinecraftClient.getInstance().options.getClampedViewDistance();
         int cloudDistance = Math.max(cloudDistanceMinimum, renderDistance * cloudDistanceMaximum + 9);

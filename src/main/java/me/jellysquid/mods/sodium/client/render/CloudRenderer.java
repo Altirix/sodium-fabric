@@ -23,6 +23,7 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL30C;
@@ -70,17 +71,17 @@ public class CloudRenderer {
     private ShaderProgram cloudsDepth;
     private final BackgroundRenderer.FogData fogData = new BackgroundRenderer.FogData(BackgroundRenderer.FogType.FOG_TERRAIN);
 
-    private int prevCenterCellX, prevCenterCellY, cachedRenderDistance;
+    private int prevCenterCellX, prevCenterCellZ, cachedRenderDistance;
 
-    private int cloudSizeX, cloudSizeZ, fogDistanceMultiplier, cloudDistanceMinimum, cloudDistanceMaximum;
+    private int cloudSizeX, cloudSizeZ, fogDistanceMultiplier, cloudDistanceMinimum, cloudDistanceMaximum, cloudDistance;
+    private double originX, originZ;
 
-    public void updateMagicValues(){
-        this.cloudSizeX = MAX_SINGLE_CLOUD_SIZE / this.edges.width;
-        this.cloudSizeZ = MAX_SINGLE_CLOUD_SIZE / this.edges.height;
-        this.fogDistanceMultiplier = CLOUD_PIXELS_TO_FOG_DISTANCE / this.edges.width;
-        this.cloudDistanceMinimum = (int) (this.edges.width * CLOUD_PIXELS_TO_MINIMUM_RENDER_DISTANCE);
-        this.cloudDistanceMaximum = (int) (this.edges.width * CLOUD_PIXELS_TO_MAXIMUM_RENDER_DISTANCE);
-
+    public void updateRenderValues(){
+        cloudSizeX = MAX_SINGLE_CLOUD_SIZE / this.edges.width;
+        cloudSizeZ = MAX_SINGLE_CLOUD_SIZE / this.edges.height;
+        fogDistanceMultiplier = CLOUD_PIXELS_TO_FOG_DISTANCE / this.edges.width;
+        cloudDistanceMinimum = (int) (this.edges.width * CLOUD_PIXELS_TO_MINIMUM_RENDER_DISTANCE);
+        cloudDistanceMaximum = (int) (this.edges.width * CLOUD_PIXELS_TO_MAXIMUM_RENDER_DISTANCE);
     }
 
     public CloudRenderer(ResourceFactory factory) {
@@ -94,19 +95,27 @@ public class CloudRenderer {
 
         Vec3d color = world.getCloudsColor(tickDelta);
 
-        float cloudHeight = world.getDimensionEffects().getCloudsHeight();
+        float cloudHeight = world.getDimensionEffects().getCloudsHeight();;
 
         double cloudTime = (ticks + tickDelta) * 0.03F;
-        double cloudCenterX = (cameraX + cloudTime);
+        double cloudCenterX = (cameraX + cloudTime); // position of clouds
         double cloudCenterZ = (cameraZ) + 3.96F;
 
         int renderDistance = MinecraftClient.getInstance().options.getClampedViewDistance();
-        int cloudDistance = Math.max(cloudDistanceMinimum, renderDistance * cloudDistanceMaximum + 9);
+        // 8 rd (128units) = ~(100units) before reload
+        // 32 rd (512blocks) = ~(300units)
+        // multiplying render distance by 10 seems to work as a good interval to rebuild by
 
-        int centerCellX = (int) (Math.floor(cloudCenterX / cloudSizeX));
-        int centerCellZ = (int) (Math.floor(cloudCenterZ / cloudSizeZ));
+        if (this.vertexBuffer == null
+                || Math.abs(this.originX - cloudCenterX) >= renderDistance * 10
+                || Math.abs(this.originZ - cloudCenterZ) >= renderDistance * 10
+                || this.cachedRenderDistance != renderDistance) {
 
-        if (this.vertexBuffer == null || this.prevCenterCellX != centerCellX || this.prevCenterCellY != centerCellZ || this.cachedRenderDistance != renderDistance) {
+            cloudDistance = Math.max(cloudDistanceMinimum, (renderDistance + 5) * cloudDistanceMaximum);
+
+            int centerCellX = (int) (Math.floor(cloudCenterX / cloudSizeX)); // clouds bound to index grid
+            int centerCellZ = (int) (Math.floor(cloudCenterZ / cloudSizeZ));
+
             BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
             bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
@@ -122,7 +131,9 @@ public class CloudRenderer {
             VertexBuffer.unbind();
 
             this.prevCenterCellX = centerCellX;
-            this.prevCenterCellY = centerCellZ;
+            this.prevCenterCellZ = centerCellZ;
+            this.originX = cloudCenterX;
+            this.originZ = cloudCenterZ;
             this.cachedRenderDistance = renderDistance;
         }
 
@@ -137,8 +148,8 @@ public class CloudRenderer {
         RenderSystem.setShaderFogEnd(fogData.fogEnd);
         RenderSystem.setShaderFogStart(fogData.fogStart);
 
-        float translateX = (float) (cloudCenterX - (centerCellX * cloudSizeX));
-        float translateZ = (float) (cloudCenterZ - (centerCellZ * cloudSizeZ));
+        float translateX = (float) (cloudCenterX - (prevCenterCellX * cloudSizeX));
+        float translateZ = (float) (cloudCenterZ - (prevCenterCellZ * cloudSizeZ));
 
         RenderSystem.enableDepthTest();
 
@@ -341,7 +352,7 @@ public class CloudRenderer {
             this.vertexBuffer = null;
         }
 
-        updateMagicValues();
+        updateRenderValues();
     }
 
     public void destroy() {

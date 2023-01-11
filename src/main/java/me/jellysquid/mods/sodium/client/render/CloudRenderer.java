@@ -23,7 +23,6 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL30C;
@@ -71,10 +70,10 @@ public class CloudRenderer {
     private ShaderProgram cloudsDepth;
     private final BackgroundRenderer.FogData fogData = new BackgroundRenderer.FogData(BackgroundRenderer.FogType.FOG_TERRAIN);
 
-    private int prevCenterCellX, prevCenterCellZ, cachedRenderDistance;
+    private int prevCloudIndexX, prevCloudIndexZ, cachedRenderDistance;
 
     private int cloudSizeX, cloudSizeZ, fogDistanceMultiplier, cloudDistanceMinimum, cloudDistanceMaximum, cloudDistance;
-    private double originX, originZ;
+    private double playerCloudX, playerCloudZ;
 
     public void updateRenderValues(){
         cloudSizeX = MAX_SINGLE_CLOUD_SIZE / this.edges.width;
@@ -98,28 +97,29 @@ public class CloudRenderer {
         float cloudHeight = world.getDimensionEffects().getCloudsHeight();;
 
         double cloudTime = (ticks + tickDelta) * 0.03F;
-        double cloudCenterX = (cameraX + cloudTime); // position of clouds
-        double cloudCenterZ = (cameraZ) + 3.96F;
+        double playerCloudX = (cameraX + cloudTime); // position of clouds
+        double playerCloudZ = (cameraZ) + 3.96F;
 
         int renderDistance = MinecraftClient.getInstance().options.getClampedViewDistance();
+        int rebuildCloudDistance = renderDistance * 10;
         // 8 rd (128units) = ~(100units) before reload
         // 32 rd (512blocks) = ~(300units)
         // multiplying render distance by 10 seems to work as a good interval to rebuild by
 
         if (this.vertexBuffer == null
-                || Math.abs(this.originX - cloudCenterX) >= renderDistance * 10
-                || Math.abs(this.originZ - cloudCenterZ) >= renderDistance * 10
+                || Math.abs(this.playerCloudX - playerCloudX) >= rebuildCloudDistance
+                || Math.abs(this.playerCloudZ - playerCloudZ) >= rebuildCloudDistance
                 || this.cachedRenderDistance != renderDistance) {
 
             cloudDistance = Math.max(cloudDistanceMinimum, (renderDistance + 5) * cloudDistanceMaximum);
 
-            int centerCellX = (int) (Math.floor(cloudCenterX / cloudSizeX)); // clouds bound to index grid
-            int centerCellZ = (int) (Math.floor(cloudCenterZ / cloudSizeZ));
+            int cloudIndexX = (int) (Math.floor(playerCloudX / cloudSizeX)); // clouds bound to index grid
+            int cloudIndexZ = (int) (Math.floor(playerCloudZ / cloudSizeZ));
 
             BufferBuilder bufferBuilder = Tessellator.getInstance().getBuffer();
             bufferBuilder.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
-            this.rebuildGeometry(bufferBuilder, cloudDistance, centerCellX, centerCellZ);
+            this.rebuildGeometry(bufferBuilder, cloudDistance, cloudIndexX, cloudIndexZ);
 
             if (this.vertexBuffer == null) {
                 this.vertexBuffer = new VertexBuffer();
@@ -130,10 +130,10 @@ public class CloudRenderer {
 
             VertexBuffer.unbind();
 
-            this.prevCenterCellX = centerCellX;
-            this.prevCenterCellZ = centerCellZ;
-            this.originX = cloudCenterX;
-            this.originZ = cloudCenterZ;
+            this.prevCloudIndexX = cloudIndexX;
+            this.prevCloudIndexZ = cloudIndexZ;
+            this.playerCloudX = playerCloudX;
+            this.playerCloudZ = playerCloudZ;
             this.cachedRenderDistance = renderDistance;
         }
 
@@ -148,8 +148,8 @@ public class CloudRenderer {
         RenderSystem.setShaderFogEnd(fogData.fogEnd);
         RenderSystem.setShaderFogStart(fogData.fogStart);
 
-        float translateX = (float) (cloudCenterX - (prevCenterCellX * cloudSizeX));
-        float translateZ = (float) (cloudCenterZ - (prevCenterCellZ * cloudSizeZ));
+        float translateX = (float) (playerCloudX - (prevCloudIndexX * cloudSizeX));
+        float translateZ = (float) (playerCloudZ - (prevCloudIndexZ * cloudSizeZ));
 
         RenderSystem.enableDepthTest();
 

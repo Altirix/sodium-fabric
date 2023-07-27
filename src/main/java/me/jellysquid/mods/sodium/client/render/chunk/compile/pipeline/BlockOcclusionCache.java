@@ -12,7 +12,6 @@ import net.minecraft.world.BlockView;
 
 public class BlockOcclusionCache {
     private static final byte UNCACHED_VALUE = (byte) 127;
-
     private final Object2ByteLinkedOpenHashMap<CachedOcclusionShapeTest> map;
     private final CachedOcclusionShapeTest cachedTest = new CachedOcclusionShapeTest();
     private final BlockPos.Mutable cpos = new BlockPos.Mutable();
@@ -45,13 +44,19 @@ public class BlockOcclusionCache {
                 return false;
             }
 
-            if (selfShape.isEmpty()) {
-                if (adjShape.isEmpty()){
-                    return true; //example: top face of potted plants if top slab is placed above
-                }
-                else if (!adjState.isSideSolid(view,pos,facing.getOpposite(), SideShapeType.FULL)){
-                    return true; //example: face of potted plants rendered if top stair placed above
-                }
+            if (adjShape.isEmpty() && adjState.getOutlineShape(view, adjPos).getFace(facing.getOpposite()) == VoxelShapes.fullCube()){
+                // using the outline shape to find full cubes that don't normally cull, (powdered_snow)
+                // prevent z fighting with all other axis aligned blocks, z fighting otherwise occurs in south & west internal faces
+                // Exception for beds as they do not execute shouldDrawSides
+                return false;
+            }
+//            if (selfState.getOutlineShape(view, pos).getFace(facing) != VoxelShapes.fullCube() && adjState.isSideSolid(view,adjPos,facing.getOpposite(), SideShapeType.FULL)){
+//                // potted plants with azalea tree/cactus
+//                return false;
+//            }
+
+            if (selfShape.isEmpty()){
+                return true;
             }
 
             return this.calculate(selfShape, adjShape);

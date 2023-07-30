@@ -33,12 +33,10 @@ public class FlatLightPipeline implements LightPipeline {
         int flags = quad.getFlags();
         // To match vanilla behavior, use the cull face if it exists/is available
         if (cullFace != null) {
-            if ((flags & ModelQuadFlags.IS_PARALLEL) != 0 && LightDataAccess.unpackFC(this.lightCache.get(pos))) {
+            if (LightDataAccess.unpackEM(this.lightCache.get(pos)) || (flags & ModelQuadFlags.IS_PARALLEL) != 0 && LightDataAccess.unpackFC(this.lightCache.get(pos))) {
                 lightmap = getOffsetLightmap(pos,cullFace);
             } else {
-                lightmap = LightDataAccess.unpackEM(this.lightCache.get(pos)) ?
-                        getOffsetLightmap(pos,cullFace) :
-                        LightDataAccess.unpackLM(this.lightCache.get(pos,cullFace));
+                lightmap = LightDataAccess.unpackLM(this.lightCache.get(pos,cullFace));
             }
         } else {
             // If the face is aligned, use the light data above it

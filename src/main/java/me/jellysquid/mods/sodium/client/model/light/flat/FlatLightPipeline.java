@@ -37,7 +37,7 @@ public class FlatLightPipeline implements LightPipeline {
                 lightmap = getOffsetLightmap(pos,cullFace);
             } else {
                 lightmap = LightDataAccess.unpackEM(this.lightCache.get(pos)) ?
-                        LightDataAccess.unpackLM(this.lightCache.get(pos)) :
+                        getOffsetLightmap(pos,cullFace) :
                         LightDataAccess.unpackLM(this.lightCache.get(pos,cullFace));
             }
         } else {

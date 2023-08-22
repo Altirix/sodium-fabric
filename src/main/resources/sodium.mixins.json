@@ -82,9 +82,6 @@
     "features.world.storage.ClientChunkMapMixin",
     "workarounds.context_creation.WindowMixin",
 
-    "features.world.biome.FoliageColorsAccessor",
-    "features.world.biome.GrassColorsAccessor",
-    "features.render.world.clouds.BackgroundRendererInvoker",
     "workarounds.event_loop.RenderSystemMixin"
   ]
 }

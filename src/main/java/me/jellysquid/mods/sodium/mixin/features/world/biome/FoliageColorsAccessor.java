@@ -6,8 +6,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(FoliageColors.class)
 public interface FoliageColorsAccessor {
-    @Accessor
+    @Accessor("colorMap")
     static int[] getColorMap() {
         throw new AssertionError();
+        // static accessor breaks hotswap?
     }
 }

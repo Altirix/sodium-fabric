@@ -31,7 +31,7 @@ public class PostLaunchChecks {
         LOGGER.info("OpenGL Version: {}", driver.version());
 
         if (isBrokenNvidiaDriverInstalled(driver)) {
-            showConsoleMessage(Text.of("sodium.console.broken_nvidia_driver"));
+            showConsoleMessage(Text.translatable("sodium.console.broken_nvidia_driver"));
             logMessage("The NVIDIA graphics driver appears to be out of date. This will likely cause severe " +
                     "performance issues and crashes when used with Sodium. The graphics driver should be updated to " +
                     "the latest version (version 536.23 or newer).");

@@ -1,7 +1,9 @@
 package me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline;
 
+import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.objects.Object2ByteLinkedOpenHashMap;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.SideShapeType;
 import net.minecraft.util.function.BooleanBiFunction;
 import net.minecraft.util.math.BlockPos;
@@ -44,12 +46,12 @@ public class BlockOcclusionCache {
                 return false;
             }
 
-            else if (adjShape.isEmpty()) {
-                // adj block should be powdered snow, hide adj face to prevent z fighting
+            else if (adjState.isSideInvisible(adjState,facing.getOpposite())) {
+                // adj block should be powdered snow, hide self face to prevent z fighting
                 return false;
             }
-            else if (selfShape.isEmpty()){
-                // self block is powdered snow
+            else if (selfShape.isEmpty()) {
+                // powdered snow has no shape
                 return true;
             }
             return this.calculate(selfShape, adjShape);

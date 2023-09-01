@@ -44,21 +44,14 @@ public class BlockOcclusionCache {
                 return false;
             }
 
-            if (adjShape.isEmpty() && adjState.getOutlineShape(view, adjPos).getFace(facing.getOpposite()) == VoxelShapes.fullCube()){
-                // using the outline shape to find full cubes that don't normally cull, (powdered_snow)
-                // prevent z fighting with all other axis aligned blocks, z fighting otherwise occurs in south & west internal faces
-                // Exception for beds as they do not execute shouldDrawSides
+            else if (adjShape.isEmpty()) {
+                // adj block should be powdered snow, hide adj face to prevent z fighting
                 return false;
             }
-//            if (selfState.getOutlineShape(view, pos).getFace(facing) != VoxelShapes.fullCube() && adjState.isSideSolid(view,adjPos,facing.getOpposite(), SideShapeType.FULL)){
-//                // potted plants with azalea tree/cactus
-//                return false;
-//            }
-
-            if (selfShape.isEmpty()){
+            else if (selfShape.isEmpty()){
+                // self block is powdered snow
                 return true;
             }
-
             return this.calculate(selfShape, adjShape);
         } else {
             return true;
